@@ -2,46 +2,43 @@ package util;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.Statement;
+import java.sql.SQLException;
 
 public class ConexionBD {
+    private static Connection conexion;
     private static final String URL = "jdbc:mysql://localhost:3306/tarea2dwesguillermojmp";
-    private static final String USER = "root";
+    private static final String USUARIO = "root";
     private static final String PASSWORD = "";
 
-    private static Connection conexion;
+    // Constructor privado para Singleton
+    private ConexionBD() {}
 
-    public static Connection obtenerConexion() throws Exception {
+    // Obtener la conexión
+    public static Connection obtenerConexion() throws SQLException {
         if (conexion == null || conexion.isClosed()) {
-            conexion = DriverManager.getConnection(URL, USER, PASSWORD);
-            System.out.println("Conexión establecida.");
-            limpiarBaseDeDatos(); // Llama al método para truncar las tablas
+            try {
+                Class.forName("com.mysql.cj.jdbc.Driver");
+                conexion = DriverManager.getConnection(URL, USUARIO, PASSWORD);
+                System.out.println("Conexión exitosa a la base de datos.");
+            } catch (ClassNotFoundException e) {
+                System.err.println("Error: No se encontró el driver JDBC.");
+                e.printStackTrace();
+            }
         }
         return conexion;
     }
 
-    private static void limpiarBaseDeDatos() {
-        String[] tablas = {"Mensaje", "Credenciales", "Ejemplar", "Persona", "Planta"};
-        try (Statement stmt = conexion.createStatement()) {
-            stmt.executeUpdate("SET FOREIGN_KEY_CHECKS = 0"); // Deshabilitar claves foráneas temporalmente
-            for (String tabla : tablas) {
-                stmt.executeUpdate("TRUNCATE TABLE " + tabla); // Vaciar cada tabla
-            }
-            stmt.executeUpdate("SET FOREIGN_KEY_CHECKS = 1"); // Habilitar claves foráneas
-            System.out.println("Base de datos limpia.");
-        } catch (Exception e) {
-            System.out.println("Error al limpiar la base de datos: " + e.getMessage());
-        }
-    }
-
+    // Cerrar la conexión manualmente
     public static void cerrarConexion() {
-        try {
-            if (conexion != null && !conexion.isClosed()) {
+        if (conexion != null) {
+            try {
                 conexion.close();
+                conexion = null;
                 System.out.println("Conexión cerrada.");
+            } catch (SQLException e) {
+                System.err.println("Error al cerrar la conexión.");
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            System.out.println("Error al cerrar la conexión: " + e.getMessage());
         }
     }
 }

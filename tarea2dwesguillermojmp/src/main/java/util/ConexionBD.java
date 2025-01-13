@@ -1,44 +1,54 @@
 package util;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Properties;
+import javax.sql.DataSource;
+
+import com.mysql.cj.jdbc.MysqlDataSource;
 
 public class ConexionBD {
-    private static Connection conexion;
-    private static final String URL = "jdbc:mysql://localhost:3306/tarea2dwesguillermojmp";
-    private static final String USUARIO = "root";
-    private static final String PASSWORD = "";
 
-    // Constructor privado para Singleton
-    private ConexionBD() {}
+    private static Connection connexion;
+    private static MysqlDataSource mysqlDataSource;
 
-    // Obtener la conexión
-    public static Connection obtenerConexion() throws SQLException {
-        if (conexion == null || conexion.isClosed()) {
-            try {
-                Class.forName("com.mysql.cj.jdbc.Driver");
-                conexion = DriverManager.getConnection(URL, USUARIO, PASSWORD);
-                System.out.println("Conexión exitosa a la base de datos.");
-            } catch (ClassNotFoundException e) {
-                System.err.println("Error: No se encontró el driver JDBC.");
-                e.printStackTrace();
-            }
+    // Método para cargar las propiedades y configurar el DataSource
+    private static void configurarDataSource() throws IOException {
+        Properties properties = new Properties();
+        try (FileInputStream fis = new FileInputStream("src/resources/db.properties")) {
+            properties.load(fis);
+            mysqlDataSource = new MysqlDataSource();
+            mysqlDataSource.setUrl(properties.getProperty("url"));
+            mysqlDataSource.setUser(properties.getProperty("user"));
+            mysqlDataSource.setPassword(properties.getProperty("password"));
+        } catch (IOException e) {
+            throw new IOException("Error cargando el archivo de propiedades: " + e.getMessage(), e);
         }
-        return conexion;
     }
 
-    // Cerrar la conexión manualmente
-    public static void cerrarConexion() {
-        if (conexion != null) {
-            try {
-                conexion.close();
-                conexion = null;
-                System.out.println("Conexión cerrada.");
-            } catch (SQLException e) {
-                System.err.println("Error al cerrar la conexión.");
-                e.printStackTrace();
+    // Método para obtener la conexión
+    public static Connection obtenerConexion() throws Exception {
+        if (connexion == null || connexion.isClosed()) {
+            if (mysqlDataSource == null) {
+                configurarDataSource(); // Configura el DataSource si no está inicializado
             }
+            connexion = mysqlDataSource.getConnection();
+            System.out.println("Conexión establecida.");
+        }
+        return connexion;
+    }
+
+    // Método para cerrar la conexión
+    public static void cerrarConexion() {
+        try {
+            if (connexion != null && !connexion.isClosed()) {
+                connexion.close();
+                System.out.println("Conexión cerrada.");
+            }
+        } catch (Exception e) {
+            System.err.println("Error al cerrar la conexión: " + e.getMessage());
         }
     }
 }
